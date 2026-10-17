@@ -243,7 +243,6 @@ function Dashboard({ session }) {
                         <label className="multbox" title="Multiplicar o custo do servidor por quantas vezes">×
                           <input className="multin" type="number" min="0" step="any" inputMode="decimal" aria-label="Multiplicador do custo do servidor" value={c.multiplier ?? 1} onChange={(e) => editClient(c.id, { multiplier: e.target.value })} onBlur={() => { const m = mult(c); editClient(c.id, { multiplier: m }); saveClient(c.id, { multiplier: m }); }} />
                         </label>
-                        <small className="costline">Custo: {brl((Number(serverById(c.server_id)?.cost) || 0) * mult(c))}</small>
                       </span>
                       <span className="det" data-l="Valor"><input className="val" type="number" min="0" step="0.01" value={c.value} onChange={(e) => editClient(c.id, { value: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
                       <span className="f-status" data-l="Status"><b className={`badge ${st.k}`}>{st.t}</b></span>
