@@ -27,7 +27,7 @@ function Login() {
   };
   return (
     <main className="login">
-      <h1>Vencimentos</h1>
+      <img className="logo" src="/logo.png" alt="Artv" />
       <p className="hint">Entre para ver seus dados em qualquer aparelho.</p>
       <div className="panel">
         <div className="loginform">
@@ -59,6 +59,8 @@ function Dashboard({ session }) {
   const [sent, setSent] = useState({});
   const [msgs, setMsgs] = useState(MSG);
   const [error, setError] = useState("");
+  const [serversOpen, setServersOpen] = useState(() => localStorage.getItem("serversOpen") === "1");
+  const toggleServers = () => setServersOpen((o) => { localStorage.setItem("serversOpen", o ? "0" : "1"); return !o; });
   const [form, setForm] = useState({ name: "", phone: "", server_id: "", due: todayStr(), value: "" });
 
   const check = (res) => { if (res.error) setError(res.error.message); else setError(""); return res; };
@@ -119,6 +121,7 @@ function Dashboard({ session }) {
   };
   const delServer = async (id) => {
     if (clients.some((c) => c.server_id === id)) return alert("Este servidor está em uso por clientes.");
+    if (!window.confirm(`Apagar o servidor "${serverById(id)?.name || ""}"?`)) return;
     check(await supabase.from("servers").delete().eq("id", id));
     setServers((s) => s.filter((x) => x.id !== id));
   };
@@ -131,6 +134,8 @@ function Dashboard({ session }) {
     setForm({ ...form, name: "", phone: "", value: "" });
   };
   const delClient = async (id) => {
+    const c = clients.find((x) => x.id === id);
+    if (!window.confirm(`Apagar o cliente "${c?.name || ""}"? Essa ação não pode ser desfeita.`)) return;
     check(await supabase.from("clients").delete().eq("id", id));
     setClients((c) => c.filter((x) => x.id !== id));
   };
@@ -156,9 +161,10 @@ function Dashboard({ session }) {
     <main>
       <header className="top">
         <div className="topbar">
-          <h1>Vencimentos</h1>
+          <img className="logo" src="/logo.png" alt="Artv" />
           <button className="ghost" onClick={() => supabase.auth.signOut()}>Sair</button>
         </div>
+        <h1 className="title">Vencimentos</h1>
         <p>{pending > 0 ? `${pending} aviso${pending > 1 ? "s" : ""} para enviar hoje` : "Nenhum aviso pendente hoje"}</p>
         {error && <p className="err">{error}</p>}
       </header>
@@ -170,8 +176,11 @@ function Dashboard({ session }) {
       </section>
 
       <section className="panel">
-        <h2>Servidores</h2>
-        <div className="servers">
+        <button className="fold" onClick={toggleServers} aria-expanded={serversOpen}>
+          <h2>Servidores <small>({servers.length})</small></h2>
+          <span className={`chev ${serversOpen ? "open" : ""}`} aria-hidden="true">▾</span>
+        </button>
+        {serversOpen && <div className="servers">
           {servers.map((s) => (
             <div className="server" key={s.id}>
               <input value={s.name} onChange={(e) => editServer(s.id, { name: e.target.value })} onBlur={() => saveServer(s.id)} aria-label="Nome do servidor" />
@@ -183,7 +192,7 @@ function Dashboard({ session }) {
             </div>
           ))}
           <button className="ghost add" onClick={addServer}>+ Novo servidor</button>
-        </div>
+        </div>}
       </section>
 
       <section className="panel">

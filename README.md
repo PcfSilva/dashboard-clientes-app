@@ -15,4 +15,3 @@ npm run dev
 1. Suba a pasta para o GitHub e importe o repositório na Vercel.
 2. Em Environment Variables, adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.
 3. Deploy. Depois, em Supabase > Authentication > URL Configuration, coloque a URL da Vercel em Site URL.
-# dashboard-clientes-app
