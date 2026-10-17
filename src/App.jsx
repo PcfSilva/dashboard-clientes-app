@@ -167,16 +167,16 @@ function Dashboard({ session }) {
 
   return (
     <main>
+      <div className="brand">
+        <img className="logo" src="/logo.png" alt="Artv" />
+        <div className="stats">
+          <div><span>Bruto</span><strong>{brl(totals.gross)}</strong></div>
+          <div><span>Custos</span><strong>− {brl(totals.cost)}</strong></div>
+          <div className="net"><span>Líquido</span><strong>{brl(totals.net)}</strong></div>
+        </div>
+      </div>
       <h1 className="sr">Vencimentos</h1>
       <header className="top">
-        <div className="brand">
-          <img className="logo" src="/logo.png" alt="Artv" />
-          <div className="stats">
-            <div><span>Bruto</span><strong>{brl(totals.gross)}</strong></div>
-            <div><span>Custos</span><strong>− {brl(totals.cost)}</strong></div>
-            <div className="net"><span>Líquido</span><strong>{brl(totals.net)}</strong></div>
-          </div>
-        </div>
         <nav className="nav" aria-label="Navegação">
           <button className={page === "clientes" ? "on" : ""} aria-current={page === "clientes" ? "page" : undefined} onClick={() => setPage("clientes")}>Clientes</button>
           <button className={page === "config" ? "on" : ""} aria-current={page === "config" ? "page" : undefined} onClick={() => setPage("config")}>Servidores e mensagens</button>
