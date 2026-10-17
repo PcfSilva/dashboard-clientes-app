@@ -98,6 +98,12 @@ function Dashboard({ session }) {
     return { gross, cost, net: gross - cost };
   }, [clients, servers]);
 
+  const perServer = useMemo(() => {
+    const list = servers.map((sv) => ({ id: sv.id, name: sv.name, n: clients.filter((c) => c.server_id === sv.id).length }));
+    const none = clients.filter((c) => !serverById(c.server_id)).length;
+    return none ? [...list, { id: "none", name: "Sem servidor", n: none }] : list;
+  }, [clients, servers]);
+
   const sorted = useMemo(() => [...clients].sort((a, b) => a.due.localeCompare(b.due)), [clients]);
   const pending = sorted.filter((c) => [0, 3].includes(daysUntil(c.due)) && !sent[`${c.id}-${c.due}-${daysUntil(c.due)}`]).length;
 
@@ -180,6 +186,13 @@ function Dashboard({ session }) {
       {page === "clientes" && (
         <>
           <p className="pending">{pending > 0 ? `${pending} aviso${pending > 1 ? "s" : ""} para enviar hoje` : "Nenhum aviso pendente hoje"}</p>
+
+          <section className="counts" aria-label="Contagem de clientes">
+            <div className="chip total"><span>Total de clientes</span><strong>{clients.length}</strong></div>
+            {perServer.map((x) => (
+              <div className="chip" key={x.id}><span>{x.name}</span><strong>{x.n}</strong></div>
+            ))}
+          </section>
 
           <section className="panel">
             <h2>Novo cliente</h2>
