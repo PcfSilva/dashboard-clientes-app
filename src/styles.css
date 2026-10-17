@@ -1,18 +1,22 @@
 :root {
-  --black: #000;
-  --bg: #050506;
-  --surface: #111113;
-  --ink: #f5f5f6;
-  --muted: #9a9aa3;
-  --line: #26262b;
-  --accent: #e5231b;
-  --accent-ink: #fff;
-  --glow: #3b82f6;
-  --warn: #fbbf24;
-  --warn-bg: #33270a;
-  --bad: #ff8a80;
-  --bad-bg: #3d1311;
-  --ok-bg: #1b1b20;
+  --bg: #282a36;
+  --field: #21222c;
+  --surface: #2f3142;
+  --ink: #f8f8f2;
+  --muted: #a3abd0;
+  --line: #44475a;
+  --accent: #bd93f9;
+  --accent-ink: #282a36;
+  --pink: #ff79c6;
+  --cyan: #8be9fd;
+  --green: #50fa7b;
+  --orange: #ffb86c;
+  --glow: #8be9fd;
+  --warn: #f1fa8c;
+  --warn-bg: rgba(241, 250, 140, .14);
+  --bad: #ff6e6e;
+  --bad-bg: rgba(255, 85, 85, .16);
+  --ok-bg: rgba(139, 233, 253, .12);
   color-scheme: dark
 }
 
@@ -31,7 +35,7 @@ body {
 main {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 28px 16px 60px;
+  padding: 28px 16px 60px
 }
 
 .panel {
@@ -39,7 +43,7 @@ main {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 18px;
-  margin-bottom: 16px;
+  margin-bottom: 16px
 }
 
 .panel h2 {
@@ -59,13 +63,12 @@ button {
 input,
 select,
 textarea {
-  background: var(--bg);
+  background: var(--field);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 8px 5px;
+  padding: 8px 10px;
   width: 100%;
-  min-width: 0;
-  text-align: center;
+  min-width: 0
 }
 
 input:focus-visible,
@@ -81,10 +84,10 @@ button {
   color: var(--accent-ink);
   border: 0;
   border-radius: 6px;
-  padding: 6px 12px;
+  padding: 9px 10px;
   font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
+  white-space: nowrap
 }
 
 button:disabled {
@@ -136,10 +139,10 @@ button.ghost {
 
 .table .row {
   display: grid;
-  grid-template-columns: 1fr 1.4fr 1fr 66px 115px 190px;
+  grid-template-columns: 130px 1fr 160px 56px 110px 190px;
   gap: 8px;
   align-items: center;
-  padding: 8px 8px;
+  padding: 8px;
   border-top: 1px solid var(--line)
 }
 
@@ -246,10 +249,6 @@ button.ghost {
 }
 
 .brand {
-  background: var(--black);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -268,7 +267,7 @@ button.ghost {
   gap: 8px;
   flex: 1;
   min-width: 0;
-  justify-content: flex-end;
+  justify-content: flex-end
 }
 
 .stats div {
@@ -277,7 +276,7 @@ button.ghost {
   border-top: 2px solid var(--accent);
   border-radius: 8px;
   padding: 6px 10px;
-  min-width: 0;
+  min-width: 0
 }
 
 .stats span {
@@ -293,15 +292,15 @@ button.ghost {
 }
 
 .stats .net {
-  background: linear-gradient(135deg, #e5231b, #a3130d);
-  border-color: #e5231b;
-  border-top-color: var(--glow);
-  box-shadow: 0 0 18px rgba(229, 35, 27, .28)
+  background: linear-gradient(135deg, #bd93f9, #ff79c6);
+  border-color: #bd93f9;
+  border-top-color: var(--cyan);
+  box-shadow: 0 0 22px rgba(189, 147, 249, .35)
 }
 
 .stats .net span,
 .stats .net strong {
-  color: #fff
+  color: #282a36
 }
 
 .nav {
@@ -389,7 +388,7 @@ button.ghost {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    padding: 12px 0
+    padding: 12px 0;
   }
 
   .table .row>span[data-l]::before {
@@ -485,13 +484,13 @@ button.ghost {
 
 .chip.total span,
 .chip.total strong {
-  color: #fff
+  color: #282a36
 }
 
 input,
 select,
 textarea {
-  font-size: .85rem;
+  font-size: .85rem
 }
 
 .namebox {
@@ -510,7 +509,7 @@ textarea {
   height: 26px;
   padding: 0;
   border-radius: 50%;
-  background: var(--bg);
+  background: var(--field);
   color: var(--muted);
   border: 1px solid var(--line);
   font-size: .8rem;
@@ -570,7 +569,14 @@ textarea {
 }
 
 .val {
-  max-width: 56px;
+  max-width: 84px
+}
+
+.costline {
+  display: block;
+  color: var(--muted);
+  font-size: .72rem;
+  margin-top: 4px
 }
 
 .srvcell {
@@ -596,10 +602,112 @@ textarea {
 }
 
 .multin {
-  width: 30px;
-  padding: 8px 3px;
+  width: 58px;
+  padding: 8px 6px
+}
+
+.srvcell .costline {
+  flex-basis: 100%;
+  margin-top: 0
 }
 
 .table .row>span.srvcell[data-l]::before {
   flex-basis: 100%
+}
+
+html {
+  background: var(--bg)
+}
+
+body {
+  min-height: 100vh;
+  background: radial-gradient(900px 420px at 90% -10%, rgba(189, 147, 249, .20), transparent 70%), radial-gradient(700px 380px at -10% 0, rgba(255, 121, 198, .12), transparent 70%), var(--bg)
+}
+
+::selection {
+  background: rgba(189, 147, 249, .4)
+}
+
+.logo {
+  mix-blend-mode: lighten
+}
+
+.panel {
+  border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .25)
+}
+
+.panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink)
+}
+
+.panel h2::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 0 0 10px var(--pink)
+}
+
+.stats strong,
+.chip strong,
+.costline,
+input[type=number] {
+  font-family: "JetBrains Mono", ui-monospace, monospace
+}
+
+.stats div:nth-child(1) {
+  border-top-color: var(--green)
+}
+
+.stats div:nth-child(1) strong {
+  color: var(--green)
+}
+
+.stats div:nth-child(2) {
+  border-top-color: var(--orange)
+}
+
+.stats div:nth-child(2) strong {
+  color: var(--orange)
+}
+
+.chip strong {
+  color: var(--cyan)
+}
+
+.badge.ok {
+  color: var(--cyan)
+}
+
+.nav button.on {
+  box-shadow: 0 0 16px rgba(189, 147, 249, .4)
+}
+
+button:not(:disabled):hover {
+  filter: brightness(1.1)
+}
+
+button.ghost:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--ink);
+  filter: none
+}
+
+.table .row:not(.head):hover {
+  background: rgba(189, 147, 249, .06)
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent)
+}
+
+.err {
+  color: var(--bad)
 }
