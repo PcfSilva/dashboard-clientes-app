@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
 
 const brl = (n) => (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const mult = (c) => { const m = Number(c.multiplier); return m > 0 ? m : 1; };
 const toDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 const todayStr = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; };
 const daysUntil = (s) => Math.round((toDate(s) - toDate(todayStr())) / 86400000);
@@ -95,7 +96,7 @@ function Dashboard({ session }) {
 
   const totals = useMemo(() => {
     const gross = clients.reduce((a, c) => a + (Number(c.value) || 0), 0);
-    const cost = clients.reduce((a, c) => a + (Number(serverById(c.server_id)?.cost) || 0) * (c.multiplier || 1), 0);
+    const cost = clients.reduce((a, c) => a + (Number(serverById(c.server_id)?.cost) || 0) * mult(c), 0);
     return { gross, cost, net: gross - cost };
   }, [clients, servers]);
 
@@ -112,7 +113,7 @@ function Dashboard({ session }) {
   const editClient = (id, patch) => setClients((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   const saveClient = async (id, patch) => {
     const c = clients.find((x) => x.id === id);
-    const row = { name: c.name, phone: c.phone, server_id: c.server_id, due: c.due, value: Number(c.value) || 0, notes: c.notes || "", multiplier: c.multiplier || 1, ...patch };
+    const row = { name: c.name, phone: c.phone, server_id: c.server_id, due: c.due, value: Number(c.value) || 0, notes: c.notes || "", multiplier: mult(c), ...patch };
     check(await supabase.from("clients").update(row).eq("id", id));
   };
   const editServer = (id, patch) => setServers((ss) => ss.map((s) => (s.id === id ? { ...s, ...patch } : s)));
@@ -235,16 +236,14 @@ function Dashboard({ session }) {
                         </span>
                         {notesId !== c.id && <span className="pop" role="tooltip">{c.notes?.trim() || "Sem informações adicionais. Clique no “i” para adicionar."}</span>}
                       </span>
-                      <span className="det" data-l="Servidor / custo">
+                      <span className="det srvcell" data-l="Servidor / custo">
                         <select value={c.server_id || ""} onChange={(e) => { editClient(c.id, { server_id: e.target.value }); saveClient(c.id, { server_id: e.target.value }); }}>
                           {servers.map((sv) => <option key={sv.id} value={sv.id}>{sv.name}</option>)}
                         </select>
-                        <span className="mult" role="group" aria-label="Multiplicador do custo do servidor">
-                          {[1, 2, 3, 4].map((m) => (
-                            <button key={m} className={(c.multiplier || 1) === m ? "on" : ""} aria-pressed={(c.multiplier || 1) === m} onClick={() => { editClient(c.id, { multiplier: m }); saveClient(c.id, { multiplier: m }); }}>{m}x</button>
-                          ))}
-                        </span>
-                        <small className="costline">Custo: {brl((Number(serverById(c.server_id)?.cost) || 0) * (c.multiplier || 1))}</small>
+                        <label className="multbox" title="Multiplicar o custo do servidor por quantas vezes">×
+                          <input className="multin" type="number" min="0" step="any" inputMode="decimal" aria-label="Multiplicador do custo do servidor" value={c.multiplier ?? 1} onChange={(e) => editClient(c.id, { multiplier: e.target.value })} onBlur={() => { const m = mult(c); editClient(c.id, { multiplier: m }); saveClient(c.id, { multiplier: m }); }} />
+                        </label>
+                        <small className="costline">Custo: {brl((Number(serverById(c.server_id)?.cost) || 0) * mult(c))}</small>
                       </span>
                       <span className="det" data-l="Valor"><input className="val" type="number" min="0" step="0.01" value={c.value} onChange={(e) => editClient(c.id, { value: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
                       <span className="f-status" data-l="Status"><b className={`badge ${st.k}`}>{st.t}</b></span>

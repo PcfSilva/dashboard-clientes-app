@@ -16,7 +16,7 @@ button.ghost{background:transparent;color:var(--muted);border:1px solid var(--li
 .server small{color:var(--muted)}
 .add{min-height:90px;border-style:dashed}
 .form{display:grid;grid-template-columns:1.4fr 1.2fr 1fr 1fr 1fr auto;gap:8px}
-.table .row{display:grid;grid-template-columns:130px 1.4fr 1.1fr 96px 130px 190px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.table .row{display:grid;grid-template-columns:130px 1.4fr 190px 96px 130px 190px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
 .table .head{color:var(--muted);font-size:.85rem;border-top:0}
 .acts{display:flex;gap:6px}
 .badge{font-weight:600;font-size:.82rem;padding:4px 9px;border-radius:99px;display:inline-block}
@@ -89,7 +89,11 @@ input,select,textarea{font-size:.85rem}
 .notes label{display:block;color:var(--muted);font-size:.8rem}
 .notes textarea{margin-top:4px;color:var(--ink)}
 .val{max-width:84px}
-.mult{display:flex;gap:4px;margin-top:6px}
-.mult button{flex:1;padding:4px 0;background:var(--bg);color:var(--muted);border:1px solid var(--line);font-size:.78rem}
-.mult button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .costline{display:block;color:var(--muted);font-size:.72rem;margin-top:4px}
+
+.srvcell{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.srvcell select{flex:1;min-width:0;max-width:110px}
+.multbox{display:flex;align-items:center;gap:4px;color:var(--muted);font-size:.85rem;margin:0}
+.multin{width:58px;padding:8px 6px}
+.srvcell .costline{flex-basis:100%;margin-top:0}
+.table .row>span.srvcell[data-l]::before{flex-basis:100%}
