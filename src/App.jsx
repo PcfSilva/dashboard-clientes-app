@@ -61,6 +61,7 @@ function Dashboard({ session }) {
   const [error, setError] = useState("");
   const [page, setPage] = useState("clientes");
   const [openId, setOpenId] = useState(null);
+  const [notesId, setNotesId] = useState(null);
   const [form, setForm] = useState({ name: "", phone: "", server_id: "", due: todayStr(), value: "" });
 
   const check = (res) => { if (res.error) setError(res.error.message); else setError(""); return res; };
@@ -94,7 +95,7 @@ function Dashboard({ session }) {
 
   const totals = useMemo(() => {
     const gross = clients.reduce((a, c) => a + (Number(c.value) || 0), 0);
-    const cost = clients.reduce((a, c) => a + (Number(serverById(c.server_id)?.cost) || 0), 0);
+    const cost = clients.reduce((a, c) => a + (Number(serverById(c.server_id)?.cost) || 0) * (c.multiplier || 1), 0);
     return { gross, cost, net: gross - cost };
   }, [clients, servers]);
 
@@ -111,7 +112,7 @@ function Dashboard({ session }) {
   const editClient = (id, patch) => setClients((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   const saveClient = async (id, patch) => {
     const c = clients.find((x) => x.id === id);
-    const row = { name: c.name, phone: c.phone, server_id: c.server_id, due: c.due, value: Number(c.value) || 0, ...patch };
+    const row = { name: c.name, phone: c.phone, server_id: c.server_id, due: c.due, value: Number(c.value) || 0, notes: c.notes || "", multiplier: c.multiplier || 1, ...patch };
     check(await supabase.from("clients").update(row).eq("id", id));
   };
   const editServer = (id, patch) => setServers((ss) => ss.map((s) => (s.id === id ? { ...s, ...patch } : s)));
@@ -227,13 +228,25 @@ function Dashboard({ session }) {
                   return (
                     <div className={`row ${open ? "open" : ""}`} key={c.id}>
                       <span className="f-date" data-l="Vencimento"><input type="date" value={c.due} onChange={(e) => { editClient(c.id, { due: e.target.value }); if (e.target.value) saveClient(c.id, { due: e.target.value }); }} /></span>
-                      <span className="f-name" data-l="Cliente"><input value={c.name} onChange={(e) => editClient(c.id, { name: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
-                      <span className="det" data-l="Servidor">
+                      <span className="f-name" data-l="Cliente">
+                        <span className="namebox">
+                          <input value={c.name} onChange={(e) => editClient(c.id, { name: e.target.value })} onBlur={() => saveClient(c.id)} />
+                          <button className={`info ${c.notes ? "has" : ""}`} onClick={() => setNotesId(notesId === c.id ? null : c.id)} aria-expanded={notesId === c.id} aria-label="Informações adicionais" title="Informações adicionais">i</button>
+                        </span>
+                        {notesId !== c.id && <span className="pop" role="tooltip">{c.notes?.trim() || "Sem informações adicionais. Clique no “i” para adicionar."}</span>}
+                      </span>
+                      <span className="det" data-l="Servidor / custo">
                         <select value={c.server_id || ""} onChange={(e) => { editClient(c.id, { server_id: e.target.value }); saveClient(c.id, { server_id: e.target.value }); }}>
                           {servers.map((sv) => <option key={sv.id} value={sv.id}>{sv.name}</option>)}
                         </select>
+                        <span className="mult" role="group" aria-label="Multiplicador do custo do servidor">
+                          {[1, 2, 3, 4].map((m) => (
+                            <button key={m} className={(c.multiplier || 1) === m ? "on" : ""} aria-pressed={(c.multiplier || 1) === m} onClick={() => { editClient(c.id, { multiplier: m }); saveClient(c.id, { multiplier: m }); }}>{m}x</button>
+                          ))}
+                        </span>
+                        <small className="costline">Custo: {brl((Number(serverById(c.server_id)?.cost) || 0) * (c.multiplier || 1))}</small>
                       </span>
-                      <span className="det" data-l="Valor"><input type="number" min="0" step="0.01" value={c.value} onChange={(e) => editClient(c.id, { value: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
+                      <span className="det" data-l="Valor"><input className="val" type="number" min="0" step="0.01" value={c.value} onChange={(e) => editClient(c.id, { value: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
                       <span className="f-status" data-l="Status"><b className={`badge ${st.k}`}>{st.t}</b></span>
                       <span className="acts">
                         <button disabled={!canSend} onClick={() => sendMessage(c)} title={canSend ? "Abrir WhatsApp com a mensagem" : "Disponível 3 dias antes e no dia do vencimento"}>
@@ -242,6 +255,13 @@ function Dashboard({ session }) {
                         <button className="ghost tg" onClick={() => setOpenId(open ? null : c.id)} aria-expanded={open} aria-label="Detalhes do cliente">{open ? "▴" : "▾"}</button>
                         <button className="ghost del" onClick={() => delClient(c.id)} aria-label="Remover cliente">×</button>
                       </span>
+                      {notesId === c.id && (
+                        <div className="notes">
+                          <label>Informações adicionais
+                            <textarea rows="3" placeholder="Observações, forma de pagamento, aparelho..." value={c.notes || ""} onChange={(e) => editClient(c.id, { notes: e.target.value })} onBlur={() => saveClient(c.id)} />
+                          </label>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
