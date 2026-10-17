@@ -59,8 +59,8 @@ function Dashboard({ session }) {
   const [sent, setSent] = useState({});
   const [msgs, setMsgs] = useState(MSG);
   const [error, setError] = useState("");
-  const [serversOpen, setServersOpen] = useState(() => localStorage.getItem("serversOpen") === "1");
-  const toggleServers = () => setServersOpen((o) => { localStorage.setItem("serversOpen", o ? "0" : "1"); return !o; });
+  const [page, setPage] = useState("clientes");
+  const [openId, setOpenId] = useState(null);
   const [form, setForm] = useState({ name: "", phone: "", server_id: "", due: todayStr(), value: "" });
 
   const check = (res) => { if (res.error) setError(res.error.message); else setError(""); return res; };
@@ -159,101 +159,112 @@ function Dashboard({ session }) {
 
   return (
     <main>
+      <h1 className="sr">Vencimentos</h1>
       <header className="top">
-        <div className="topbar">
+        <div className="brand">
           <img className="logo" src="/logo.png" alt="Artv" />
-          <button className="ghost" onClick={() => supabase.auth.signOut()}>Sair</button>
+          <div className="stats">
+            <div><span>Bruto</span><strong>{brl(totals.gross)}</strong></div>
+            <div><span>Custos</span><strong>− {brl(totals.cost)}</strong></div>
+            <div className="net"><span>Líquido</span><strong>{brl(totals.net)}</strong></div>
+          </div>
         </div>
-        <h1 className="title">Vencimentos</h1>
-        <p>{pending > 0 ? `${pending} aviso${pending > 1 ? "s" : ""} para enviar hoje` : "Nenhum aviso pendente hoje"}</p>
+        <nav className="nav" aria-label="Navegação">
+          <button className={page === "clientes" ? "on" : ""} aria-current={page === "clientes" ? "page" : undefined} onClick={() => setPage("clientes")}>Clientes</button>
+          <button className={page === "config" ? "on" : ""} aria-current={page === "config" ? "page" : undefined} onClick={() => setPage("config")}>Servidores e mensagens</button>
+          <button className="ghost out" onClick={() => supabase.auth.signOut()}>Sair</button>
+        </nav>
         {error && <p className="err">{error}</p>}
       </header>
 
-      <section className="totals">
-        <div className="tot"><span>Valor bruto</span><strong>{brl(totals.gross)}</strong></div>
-        <div className="tot"><span>Custo dos servidores</span><strong>− {brl(totals.cost)}</strong></div>
-        <div className="tot net"><span>Valor líquido</span><strong>{brl(totals.net)}</strong></div>
-      </section>
+      {page === "clientes" && (
+        <>
+          <p className="pending">{pending > 0 ? `${pending} aviso${pending > 1 ? "s" : ""} para enviar hoje` : "Nenhum aviso pendente hoje"}</p>
 
-      <section className="panel">
-        <button className="fold" onClick={toggleServers} aria-expanded={serversOpen}>
-          <h2>Servidores <small>({servers.length})</small></h2>
-          <span className={`chev ${serversOpen ? "open" : ""}`} aria-hidden="true">▾</span>
-        </button>
-        {serversOpen && <div className="servers">
-          {servers.map((s) => (
-            <div className="server" key={s.id}>
-              <input value={s.name} onChange={(e) => editServer(s.id, { name: e.target.value })} onBlur={() => saveServer(s.id)} aria-label="Nome do servidor" />
-              <label>R$
-                <input type="number" min="0" step="0.01" value={s.cost} onChange={(e) => editServer(s.id, { cost: e.target.value })} onBlur={() => saveServer(s.id)} aria-label="Valor do servidor" />
-              </label>
-              <small>{clients.filter((c) => c.server_id === s.id).length} cliente(s)</small>
-              <button className="ghost" onClick={() => delServer(s.id)}>Remover</button>
+          <section className="panel">
+            <h2>Novo cliente</h2>
+            <div className="form">
+              <input placeholder="Nome do cliente" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <input placeholder="WhatsApp (DDD + número)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              <select value={form.server_id} onChange={(e) => setForm({ ...form, server_id: e.target.value })}>
+                <option value="">Servidor</option>
+                {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <input type="date" value={form.due} onChange={(e) => setForm({ ...form, due: e.target.value })} />
+              <input type="number" min="0" step="0.01" placeholder="Valor (R$)" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
+              <button onClick={addClient}>Adicionar cliente</button>
             </div>
-          ))}
-          <button className="ghost add" onClick={addServer}>+ Novo servidor</button>
-        </div>}
-      </section>
+          </section>
 
-      <section className="panel">
-        <h2>Novo cliente</h2>
-        <div className="form">
-          <input placeholder="Nome do cliente" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <input placeholder="WhatsApp (DDD + número)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          <select value={form.server_id} onChange={(e) => setForm({ ...form, server_id: e.target.value })}>
-            <option value="">Servidor</option>
-            {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <input type="date" value={form.due} onChange={(e) => setForm({ ...form, due: e.target.value })} />
-          <input type="number" min="0" step="0.01" placeholder="Valor (R$)" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
-          <button onClick={addClient}>Adicionar cliente</button>
-        </div>
-      </section>
-
-      <section className="panel">
-        <h2>Clientes</h2>
-        {sorted.length === 0 ? (
-          <p className="empty">Nenhum cliente ainda. Adicione o primeiro acima.</p>
-        ) : (
-          <div className="table">
-            <div className="row head">
-              <span>Vencimento</span><span>Cliente</span><span>Servidor</span><span>Valor</span><span>Status</span><span></span>
-            </div>
-            {sorted.map((c) => {
-              const d = daysUntil(c.due);
-              const st = status(d);
-              const canSend = d === 3 || d === 0;
-              const done = sent[`${c.id}-${c.due}-${d}`];
-              return (
-                <div className="row" key={c.id}>
-                  <span data-l="Vencimento"><input type="date" value={c.due} onChange={(e) => { editClient(c.id, { due: e.target.value }); if (e.target.value) saveClient(c.id, { due: e.target.value }); }} /></span>
-                  <span data-l="Cliente"><input value={c.name} onChange={(e) => editClient(c.id, { name: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
-                  <span data-l="Servidor">
-                    <select value={c.server_id || ""} onChange={(e) => { editClient(c.id, { server_id: e.target.value }); saveClient(c.id, { server_id: e.target.value }); }}>
-                      {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </span>
-                  <span data-l="Valor"><input type="number" min="0" step="0.01" value={c.value} onChange={(e) => editClient(c.id, { value: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
-                  <span data-l="Status"><b className={`badge ${st.k}`}>{st.t}</b></span>
-                  <span className="acts">
-                    <button disabled={!canSend} onClick={() => sendMessage(c)} title={canSend ? "Abrir WhatsApp com a mensagem" : "Disponível 3 dias antes e no dia do vencimento"}>
-                      {done ? "Enviar de novo" : "Enviar mensagem"}
-                    </button>
-                    <button className="ghost" onClick={() => delClient(c.id)} aria-label="Remover cliente">×</button>
-                  </span>
+          <section className="panel">
+            <h2>Clientes</h2>
+            {sorted.length === 0 ? (
+              <p className="empty">Nenhum cliente ainda. Adicione o primeiro acima.</p>
+            ) : (
+              <div className="table">
+                <div className="row head">
+                  <span>Vencimento</span><span>Cliente</span><span>Servidor</span><span>Valor</span><span>Status</span><span></span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                {sorted.map((c) => {
+                  const d = daysUntil(c.due);
+                  const st = status(d);
+                  const canSend = d === 3 || d === 0;
+                  const done = sent[`${c.id}-${c.due}-${d}`];
+                  const open = openId === c.id;
+                  return (
+                    <div className={`row ${open ? "open" : ""}`} key={c.id}>
+                      <span className="f-date" data-l="Vencimento"><input type="date" value={c.due} onChange={(e) => { editClient(c.id, { due: e.target.value }); if (e.target.value) saveClient(c.id, { due: e.target.value }); }} /></span>
+                      <span className="f-name" data-l="Cliente"><input value={c.name} onChange={(e) => editClient(c.id, { name: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
+                      <span className="det" data-l="Servidor">
+                        <select value={c.server_id || ""} onChange={(e) => { editClient(c.id, { server_id: e.target.value }); saveClient(c.id, { server_id: e.target.value }); }}>
+                          {servers.map((sv) => <option key={sv.id} value={sv.id}>{sv.name}</option>)}
+                        </select>
+                      </span>
+                      <span className="det" data-l="Valor"><input type="number" min="0" step="0.01" value={c.value} onChange={(e) => editClient(c.id, { value: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
+                      <span className="f-status" data-l="Status"><b className={`badge ${st.k}`}>{st.t}</b></span>
+                      <span className="acts">
+                        <button disabled={!canSend} onClick={() => sendMessage(c)} title={canSend ? "Abrir WhatsApp com a mensagem" : "Disponível 3 dias antes e no dia do vencimento"}>
+                          {done ? "Enviar de novo" : "Enviar mensagem"}
+                        </button>
+                        <button className="ghost tg" onClick={() => setOpenId(open ? null : c.id)} aria-expanded={open} aria-label="Detalhes do cliente">{open ? "▴" : "▾"}</button>
+                        <button className="ghost del" onClick={() => delClient(c.id)} aria-label="Remover cliente">×</button>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </>
+      )}
 
-      <section className="panel">
-        <h2>Mensagens</h2>
-        <p className="hint">Use {"{nome}"}, {"{data}"} e {"{valor}"} no texto.</p>
-        <label className="msg">3 dias antes<textarea rows="2" value={msgs.msg_before} onChange={(e) => setMsgs({ ...msgs, msg_before: e.target.value })} onBlur={saveMsgs} /></label>
-        <label className="msg">No dia do vencimento<textarea rows="2" value={msgs.msg_today} onChange={(e) => setMsgs({ ...msgs, msg_today: e.target.value })} onBlur={saveMsgs} /></label>
-      </section>
+      {page === "config" && (
+        <>
+          <section className="panel">
+            <h2>Servidores</h2>
+            <div className="servers">
+              {servers.map((sv) => (
+                <div className="server" key={sv.id}>
+                  <input value={sv.name} onChange={(e) => editServer(sv.id, { name: e.target.value })} onBlur={() => saveServer(sv.id)} aria-label="Nome do servidor" />
+                  <label>R$
+                    <input type="number" min="0" step="0.01" value={sv.cost} onChange={(e) => editServer(sv.id, { cost: e.target.value })} onBlur={() => saveServer(sv.id)} aria-label="Valor do servidor" />
+                  </label>
+                  <small>{clients.filter((c) => c.server_id === sv.id).length} cliente(s)</small>
+                  <button className="ghost" onClick={() => delServer(sv.id)}>Remover</button>
+                </div>
+              ))}
+              <button className="ghost add" onClick={addServer}>+ Novo servidor</button>
+            </div>
+          </section>
+
+          <section className="panel">
+            <h2>Mensagens ao cliente</h2>
+            <p className="hint">Use {"{nome}"}, {"{data}"} e {"{valor}"} no texto.</p>
+            <label className="msg">3 dias antes<textarea rows="3" value={msgs.msg_before} onChange={(e) => setMsgs({ ...msgs, msg_before: e.target.value })} onBlur={saveMsgs} /></label>
+            <label className="msg">No dia do vencimento<textarea rows="3" value={msgs.msg_today} onChange={(e) => setMsgs({ ...msgs, msg_today: e.target.value })} onBlur={saveMsgs} /></label>
+          </section>
+        </>
+      )}
     </main>
   );
 }
