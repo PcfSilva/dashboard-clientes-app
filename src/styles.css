@@ -767,3 +767,10 @@ textarea:focus {
     display: none;
   }
 }
+.trow{align-items:flex-start}
+.tname{background:none;border:0;padding:6px 0;color:var(--ink);font-weight:600;font-size:1rem;text-align:left;display:flex;gap:8px;align-items:center;white-space:normal}
+.tname span{color:var(--accent)}
+.tdet{display:grid;gap:4px;margin-top:2px;justify-items:start}
+.tdet small{color:var(--muted)}
+.tdet .tnote{white-space:pre-wrap;color:var(--ink);opacity:.8}
+.purge{margin-top:6px;padding:8px 12px}

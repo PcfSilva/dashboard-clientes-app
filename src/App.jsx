@@ -10,6 +10,7 @@ const fmtDate = (s) => toDate(s).toLocaleDateString("pt-BR");
 const MSG = {
   msg_before: "Olá {nome}! Seu plano vence em 3 dias ({data}). Valor: {valor}. Podemos renovar?",
   msg_today: "Olá {nome}! Seu plano vence hoje ({data}). Valor: {valor}. Podemos renovar?",
+  msg_expired: "Olá {nome}! Seu aplicativo venceu em {data}. Valor para renovar: {valor}. Podemos reativar?",
 };
 
 function Login() {
@@ -63,6 +64,7 @@ function Dashboard({ session }) {
   const [page, setPage] = useState("clientes");
   const [openId, setOpenId] = useState(null);
   const [notesId, setNotesId] = useState(null);
+  const [trashOpen, setTrashOpen] = useState(null);
   const [form, setForm] = useState({ name: "", phone: "", server_id: "", due: todayStr(), value: "" });
 
   const check = (res) => { if (res.error) setError(res.error.message); else setError(""); return res; };
@@ -78,7 +80,7 @@ function Dashboard({ session }) {
     if (s.data) setServers(s.data);
     if (c.data) setClients(c.data);
     if (l.data) setSent(Object.fromEntries(l.data.map((x) => [`${x.client_id}-${x.due}-${x.days}`, true])));
-    if (st.data) setMsgs({ msg_before: st.data.msg_before ?? MSG.msg_before, msg_today: st.data.msg_today ?? MSG.msg_today });
+    if (st.data) setMsgs({ msg_before: st.data.msg_before ?? MSG.msg_before, msg_today: st.data.msg_today ?? MSG.msg_today, msg_expired: st.data.msg_expired ?? MSG.msg_expired });
   }, []);
 
   useEffect(() => {
@@ -162,6 +164,11 @@ function Dashboard({ session }) {
     if (!r.error) setClients((cs) => cs.filter((x) => x.id !== id));
   };
   const saveMsgs = async () => check(await supabase.from("settings").upsert({ user_id: session.user.id, ...msgs }));
+
+  const sendExpired = (c) => {
+    const text = msgs.msg_expired.replace("{nome}", c.name).replace("{data}", fmtDate(c.due)).replace("{valor}", brl(c.value));
+    window.open(`https://wa.me/${(c.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`, "_blank");
+  };
 
   const sendMessage = async (c) => {
     const d = daysUntil(c.due);
@@ -308,6 +315,7 @@ function Dashboard({ session }) {
             <p className="hint">Use {"{nome}"}, {"{data}"} e {"{valor}"} no texto.</p>
             <label className="msg">3 dias antes<textarea rows="3" value={msgs.msg_before} onChange={(e) => setMsgs({ ...msgs, msg_before: e.target.value })} onBlur={saveMsgs} /></label>
             <label className="msg">No dia do vencimento<textarea rows="3" value={msgs.msg_today} onChange={(e) => setMsgs({ ...msgs, msg_today: e.target.value })} onBlur={saveMsgs} /></label>
+            <label className="msg">Aplicativo vencido (clientes excluídos)<textarea rows="3" value={msgs.msg_expired} onChange={(e) => setMsgs({ ...msgs, msg_expired: e.target.value })} onBlur={saveMsgs} /></label>
           </section>
         </>
       )}
@@ -319,20 +327,30 @@ function Dashboard({ session }) {
             <p className="empty">Nenhum cliente excluído.</p>
           ) : (
             <div className="trash">
-              {trash.map((c) => (
-                <div className="trow" key={c.id}>
-                  <div className="tinfo">
-                    <strong>{c.name}</strong>
-                    <small>{serverById(c.server_id)?.name || "Sem servidor"} · {brl(c.value)} · venc. {fmtDate(c.due)}</small>
-                    <small>Excluído em {new Date(c.deleted_at).toLocaleDateString("pt-BR")}</small>
-                    {c.notes && <small className="tnote">{c.notes}</small>}
+              {trash.map((c) => {
+                const open = trashOpen === c.id;
+                return (
+                  <div className="trow" key={c.id}>
+                    <div className="tinfo">
+                      <button className="tname" onClick={() => setTrashOpen(open ? null : c.id)} aria-expanded={open}>
+                        {c.name} <span aria-hidden="true">{open ? "▴" : "▾"}</span>
+                      </button>
+                      {open && (
+                        <div className="tdet">
+                          <small>{serverById(c.server_id)?.name || "Sem servidor"} · {brl(c.value)} · venc. {fmtDate(c.due)}</small>
+                          <small>Excluído em {new Date(c.deleted_at).toLocaleDateString("pt-BR")}</small>
+                          {c.notes && <small className="tnote">{c.notes}</small>}
+                          <button className="ghost purge" onClick={() => purgeClient(c.id)}>Apagar de vez</button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="tacts">
+                      <button disabled={!c.phone} title={c.phone ? "Avisar que o aplicativo venceu" : "Cliente sem WhatsApp cadastrado"} onClick={() => sendExpired(c)}>Enviar aviso</button>
+                      <button onClick={() => restoreClient(c.id)}>Restaurar</button>
+                    </div>
                   </div>
-                  <div className="tacts">
-                    <button onClick={() => restoreClient(c.id)}>Restaurar</button>
-                    <button className="ghost" onClick={() => purgeClient(c.id)}>Apagar de vez</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
