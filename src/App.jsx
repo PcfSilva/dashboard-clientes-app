@@ -182,15 +182,15 @@ function Dashboard({ session }) {
   return (
     <main>
       <h1 className="sr">Vencimentos</h1>
-      <header className="top">
-        <div className="brand">
-          <img className="logo" src="/logo.png" alt="Artv" />
-          <div className="stats">
-            <div><span>Bruto</span><strong>{brl(totals.gross)}</strong></div>
-            <div><span>Custos</span><strong>− {brl(totals.cost)}</strong></div>
-            <div className="net"><span>Líquido</span><strong>{brl(totals.net)}</strong></div>
-          </div>
+      <div className="brand">
+        <img className="logo" src="/logo.png" alt="Artv" />
+        <div className="stats">
+          <div><span>Bruto</span><strong>{brl(totals.gross)}</strong></div>
+          <div><span>Custos</span><strong>− {brl(totals.cost)}</strong></div>
+          <div className="net"><span>Líquido</span><strong>{brl(totals.net)}</strong></div>
         </div>
+      </div>
+      <header className="top">
         <nav className="nav" aria-label="Navegação">
           <button className={page === "clientes" ? "on" : ""} aria-current={page === "clientes" ? "page" : undefined} onClick={() => setPage("clientes")}>Clientes</button>
           <button className={page === "config" ? "on" : ""} aria-current={page === "config" ? "page" : undefined} onClick={() => setPage("config")}>Servidores e mensagens</button>
@@ -258,12 +258,11 @@ function Dashboard({ session }) {
                         <label className="multbox" title="Multiplicar o custo do servidor por quantas vezes">×
                           <input className="multin" type="number" min="0" step="any" inputMode="decimal" aria-label="Multiplicador do custo do servidor" value={c.multiplier ?? 1} onChange={(e) => editClient(c.id, { multiplier: e.target.value })} onBlur={() => { const m = mult(c); editClient(c.id, { multiplier: m }); saveClient(c.id, { multiplier: m }); }} />
                         </label>
-                        <small className="costline">Custo: {brl((Number(serverById(c.server_id)?.cost) || 0) * mult(c))}</small>
                       </span>
                       <span className="det" data-l="Valor"><input className="val" type="number" min="0" step="0.01" value={c.value} onChange={(e) => editClient(c.id, { value: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
                       <span className="f-status" data-l="Status"><b className={`badge ${st.k}`}>{st.t}</b></span>
                       <span className="acts">
-                        <button disabled={!canSend} onClick={() => sendMessage(c)} title={canSend ? "Abrir WhatsApp com a mensagem" : "Disponível 3 dias antes e no dia do vencimento"}>
+                        <button className="send-button" disabled={!canSend} onClick={() => sendMessage(c)} title={canSend ? "Abrir WhatsApp com a mensagem" : "Disponível 3 dias antes e no dia do vencimento"}>
                           {done ? "Enviar de novo" : "Enviar mensagem"}
                         </button>
                         <button className="ghost tg" onClick={() => setOpenId(open ? null : c.id)} aria-expanded={open} aria-label="Detalhes do cliente">{open ? "▴" : "▾"}</button>
