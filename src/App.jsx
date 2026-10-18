@@ -94,19 +94,22 @@ function Dashboard({ session }) {
 
   const serverById = (id) => servers.find((s) => s.id === id);
 
+  const active = useMemo(() => clients.filter((c) => !c.deleted_at), [clients]);
+  const trash = useMemo(() => clients.filter((c) => c.deleted_at).sort((a, b) => b.deleted_at.localeCompare(a.deleted_at)), [clients]);
+
   const totals = useMemo(() => {
-    const gross = clients.reduce((a, c) => a + (Number(c.value) || 0), 0);
-    const cost = clients.reduce((a, c) => a + (Number(serverById(c.server_id)?.cost) || 0) * mult(c), 0);
+    const gross = active.reduce((a, c) => a + (Number(c.value) || 0), 0);
+    const cost = active.reduce((a, c) => a + (Number(serverById(c.server_id)?.cost) || 0) * mult(c), 0);
     return { gross, cost, net: gross - cost };
   }, [clients, servers]);
 
   const perServer = useMemo(() => {
-    const list = servers.map((sv) => ({ id: sv.id, name: sv.name, n: clients.filter((c) => c.server_id === sv.id).length }));
-    const none = clients.filter((c) => !serverById(c.server_id)).length;
+    const list = servers.map((sv) => ({ id: sv.id, name: sv.name, n: active.filter((c) => c.server_id === sv.id).length }));
+    const none = active.filter((c) => !serverById(c.server_id)).length;
     return none ? [...list, { id: "none", name: "Sem servidor", n: none }] : list;
   }, [clients, servers]);
 
-  const sorted = useMemo(() => [...clients].sort((a, b) => a.due.localeCompare(b.due)), [clients]);
+  const sorted = useMemo(() => [...active].sort((a, b) => a.due.localeCompare(b.due)), [clients]);
   const pending = sorted.filter((c) => [0, 3].includes(daysUntil(c.due)) && !sent[`${c.id}-${c.due}-${daysUntil(c.due)}`]).length;
 
   // edição: atualiza na tela na hora e grava no banco ao sair do campo (ou ao escolher)
@@ -128,7 +131,7 @@ function Dashboard({ session }) {
     setServers((s) => [...s, data]);
   };
   const delServer = async (id) => {
-    if (clients.some((c) => c.server_id === id)) return alert("Este servidor está em uso por clientes.");
+    if (clients.some((c) => c.server_id === id)) return alert("Este servidor está em uso por clientes (ativos ou excluídos).");
     if (!window.confirm(`Apagar o servidor "${serverById(id)?.name || ""}"?`)) return;
     check(await supabase.from("servers").delete().eq("id", id));
     setServers((s) => s.filter((x) => x.id !== id));
@@ -143,9 +146,20 @@ function Dashboard({ session }) {
   };
   const delClient = async (id) => {
     const c = clients.find((x) => x.id === id);
-    if (!window.confirm(`Apagar o cliente "${c?.name || ""}"? Essa ação não pode ser desfeita.`)) return;
-    check(await supabase.from("clients").delete().eq("id", id));
-    setClients((c) => c.filter((x) => x.id !== id));
+    if (!window.confirm(`Mover "${c?.name || ""}" para Excluídos? Você poderá restaurar depois.`)) return;
+    const when = new Date().toISOString();
+    const r = check(await supabase.from("clients").update({ deleted_at: when }).eq("id", id));
+    if (!r.error) editClient(id, { deleted_at: when });
+  };
+  const restoreClient = async (id) => {
+    const r = check(await supabase.from("clients").update({ deleted_at: null }).eq("id", id));
+    if (!r.error) editClient(id, { deleted_at: null });
+  };
+  const purgeClient = async (id) => {
+    const c = clients.find((x) => x.id === id);
+    if (!window.confirm(`Apagar DEFINITIVAMENTE "${c?.name || ""}"? Não será possível recuperar.`)) return;
+    const r = check(await supabase.from("clients").delete().eq("id", id));
+    if (!r.error) setClients((cs) => cs.filter((x) => x.id !== id));
   };
   const saveMsgs = async () => check(await supabase.from("settings").upsert({ user_id: session.user.id, ...msgs }));
 
@@ -167,19 +181,20 @@ function Dashboard({ session }) {
 
   return (
     <main>
-      <div className="brand">
-        <img className="logo" src="/logo.png" alt="Artv" />
-        <div className="stats">
-          <div><span>Bruto</span><strong>{brl(totals.gross)}</strong></div>
-          <div><span>Custos</span><strong>− {brl(totals.cost)}</strong></div>
-          <div className="net"><span>Líquido</span><strong>{brl(totals.net)}</strong></div>
-        </div>
-      </div>
       <h1 className="sr">Vencimentos</h1>
       <header className="top">
+        <div className="brand">
+          <img className="logo" src="/logo.png" alt="Artv" />
+          <div className="stats">
+            <div><span>Bruto</span><strong>{brl(totals.gross)}</strong></div>
+            <div><span>Custos</span><strong>− {brl(totals.cost)}</strong></div>
+            <div className="net"><span>Líquido</span><strong>{brl(totals.net)}</strong></div>
+          </div>
+        </div>
         <nav className="nav" aria-label="Navegação">
           <button className={page === "clientes" ? "on" : ""} aria-current={page === "clientes" ? "page" : undefined} onClick={() => setPage("clientes")}>Clientes</button>
           <button className={page === "config" ? "on" : ""} aria-current={page === "config" ? "page" : undefined} onClick={() => setPage("config")}>Servidores e mensagens</button>
+          <button className={page === "excluidos" ? "on" : ""} aria-current={page === "excluidos" ? "page" : undefined} onClick={() => setPage("excluidos")}>Excluídos ({trash.length})</button>
           <button className="ghost out" onClick={() => supabase.auth.signOut()}>Sair</button>
         </nav>
         {error && <p className="err">{error}</p>}
@@ -190,7 +205,7 @@ function Dashboard({ session }) {
           <p className="pending">{pending > 0 ? `${pending} aviso${pending > 1 ? "s" : ""} para enviar hoje` : "Nenhum aviso pendente hoje"}</p>
 
           <section className="counts" aria-label="Contagem de clientes">
-            <div className="chip total"><span>Total de clientes</span><strong>{clients.length}</strong></div>
+            <div className="chip total"><span>Total de clientes</span><strong>{active.length}</strong></div>
             {perServer.map((x) => (
               <div className="chip" key={x.id}><span>{x.name}</span><strong>{x.n}</strong></div>
             ))}
@@ -243,6 +258,7 @@ function Dashboard({ session }) {
                         <label className="multbox" title="Multiplicar o custo do servidor por quantas vezes">×
                           <input className="multin" type="number" min="0" step="any" inputMode="decimal" aria-label="Multiplicador do custo do servidor" value={c.multiplier ?? 1} onChange={(e) => editClient(c.id, { multiplier: e.target.value })} onBlur={() => { const m = mult(c); editClient(c.id, { multiplier: m }); saveClient(c.id, { multiplier: m }); }} />
                         </label>
+                        <small className="costline">Custo: {brl((Number(serverById(c.server_id)?.cost) || 0) * mult(c))}</small>
                       </span>
                       <span className="det" data-l="Valor"><input className="val" type="number" min="0" step="0.01" value={c.value} onChange={(e) => editClient(c.id, { value: e.target.value })} onBlur={() => saveClient(c.id)} /></span>
                       <span className="f-status" data-l="Status"><b className={`badge ${st.k}`}>{st.t}</b></span>
@@ -280,7 +296,7 @@ function Dashboard({ session }) {
                   <label>R$
                     <input type="number" min="0" step="0.01" value={sv.cost} onChange={(e) => editServer(sv.id, { cost: e.target.value })} onBlur={() => saveServer(sv.id)} aria-label="Valor do servidor" />
                   </label>
-                  <small>{clients.filter((c) => c.server_id === sv.id).length} cliente(s)</small>
+                  <small>{active.filter((c) => c.server_id === sv.id).length} cliente(s)</small>
                   <button className="ghost" onClick={() => delServer(sv.id)}>Remover</button>
                 </div>
               ))}
@@ -295,6 +311,32 @@ function Dashboard({ session }) {
             <label className="msg">No dia do vencimento<textarea rows="3" value={msgs.msg_today} onChange={(e) => setMsgs({ ...msgs, msg_today: e.target.value })} onBlur={saveMsgs} /></label>
           </section>
         </>
+      )}
+      {page === "excluidos" && (
+        <section className="panel">
+          <h2>Clientes excluídos</h2>
+          <p className="hint">Ficam salvos aqui. Clique em Restaurar para voltar à lista de clientes ativos.</p>
+          {trash.length === 0 ? (
+            <p className="empty">Nenhum cliente excluído.</p>
+          ) : (
+            <div className="trash">
+              {trash.map((c) => (
+                <div className="trow" key={c.id}>
+                  <div className="tinfo">
+                    <strong>{c.name}</strong>
+                    <small>{serverById(c.server_id)?.name || "Sem servidor"} · {brl(c.value)} · venc. {fmtDate(c.due)}</small>
+                    <small>Excluído em {new Date(c.deleted_at).toLocaleDateString("pt-BR")}</small>
+                    {c.notes && <small className="tnote">{c.notes}</small>}
+                  </div>
+                  <div className="tacts">
+                    <button onClick={() => restoreClient(c.id)}>Restaurar</button>
+                    <button className="ghost" onClick={() => purgeClient(c.id)}>Apagar de vez</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       )}
     </main>
   );
