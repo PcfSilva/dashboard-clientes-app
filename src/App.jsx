@@ -203,9 +203,9 @@ function Dashboard({ session }) {
   };
 
   const status = (d) => {
-    if (d < 0) return { t: `Vencido há ${-d}d`, k: "late" };
-    if (d === 0) return { t: "Vence hoje", k: "today" };
-    if (d === 3) return { t: "Vence em 3 dias", k: "soon" };
+    if (d < 0) return { t: `Há ${-d}d`, k: "late" };
+    if (d === 0) return { t: "Hoje", k: "today" };
+    if (d === 3) return { t: "Em 3 dias", k: "soon" };
     return { t: `Em ${d} ${d === 1 ? "dia" : "dias"}`, k: "plain" };
   };
 
