@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
 
 const brl = (n) => (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const byOrder = (a, b) => a.due.localeCompare(b.due) || (a.created_at || "").localeCompare(b.created_at || "") || a.id.localeCompare(b.id);
 const mult = (c) => { const m = Number(c.multiplier); return m > 0 ? m : 1; };
 const toDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 const todayStr = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; };
@@ -10,6 +11,7 @@ const fmtDate = (s) => toDate(s).toLocaleDateString("pt-BR");
 const MSG = {
   msg_before: "Olá {nome}! Seu plano vence em 3 dias ({data}). Valor: {valor}. Podemos renovar?",
   msg_today: "Olá {nome}! Seu plano vence hoje ({data}). Valor: {valor}. Podemos renovar?",
+  msg_paid: "Olá {nome}! Pagamento confirmado, obrigado! Seu próximo vencimento é {data}.",
   msg_expired: "Olá {nome}! Seu aplicativo venceu em {data}. Valor para renovar: {valor}. Podemos reativar?",
 };
 
@@ -65,6 +67,7 @@ function Dashboard({ session }) {
   const [openId, setOpenId] = useState(null);
   const [notesId, setNotesId] = useState(null);
   const [trashOpen, setTrashOpen] = useState(null);
+  const [dateDraft, setDateDraft] = useState({});
   const [form, setForm] = useState({ name: "", phone: "", server_id: "", due: todayStr(), value: "" });
 
   const check = (res) => { if (res.error) setError(res.error.message); else setError(""); return res; };
@@ -80,7 +83,7 @@ function Dashboard({ session }) {
     if (s.data) setServers(s.data);
     if (c.data) setClients(c.data);
     if (l.data) setSent(Object.fromEntries(l.data.map((x) => [`${x.client_id}-${x.due}-${x.days}`, true])));
-    if (st.data) setMsgs({ msg_before: st.data.msg_before ?? MSG.msg_before, msg_today: st.data.msg_today ?? MSG.msg_today, msg_expired: st.data.msg_expired ?? MSG.msg_expired });
+    if (st.data) setMsgs({ msg_before: st.data.msg_before ?? MSG.msg_before, msg_today: st.data.msg_today ?? MSG.msg_today, msg_expired: st.data.msg_expired ?? MSG.msg_expired, msg_paid: st.data.msg_paid ?? MSG.msg_paid });
   }, []);
 
   useEffect(() => {
@@ -111,7 +114,7 @@ function Dashboard({ session }) {
     return none ? [...list, { id: "none", name: "Sem servidor", n: none }] : list;
   }, [clients, servers]);
 
-  const sorted = useMemo(() => [...active].sort((a, b) => a.due.localeCompare(b.due)), [clients]);
+  const sorted = useMemo(() => [...active].sort(byOrder), [clients]);
   const pending = sorted.filter((c) => [0, 3].includes(daysUntil(c.due)) && !sent[`${c.id}-${c.due}-${daysUntil(c.due)}`]).length;
 
   // edição: atualiza na tela na hora e grava no banco ao sair do campo (ou ao escolher)
@@ -119,8 +122,23 @@ function Dashboard({ session }) {
   const saveClient = async (id, patch) => {
     const c = clients.find((x) => x.id === id);
     const row = { name: c.name, phone: c.phone, server_id: c.server_id, due: c.due, value: Number(c.value) || 0, notes: c.notes || "", multiplier: mult(c), ...patch };
-    check(await supabase.from("clients").update(row).eq("id", id));
+    return check(await supabase.from("clients").update(row).eq("id", id));
   };
+  const saveDate = async (c) => {
+    const v = dateDraft[c.id];
+    if (!v) return;
+    // abre a aba já no clique (evita bloqueio de pop-up) e preenche depois de salvar
+    const win = c.phone ? window.open("about:blank", "_blank") : null;
+    const r = await saveClient(c.id, { due: v });
+    if (r?.error) { win?.close(); return; }
+    editClient(c.id, { due: v });
+    setDateDraft((d) => { const n = { ...d }; delete n[c.id]; return n; });
+    if (c.phone) {
+      const url = paidUrl({ ...c, due: v });
+      if (win) win.location.href = url; else window.open(url, "_blank");
+    }
+  };
+  const hasDraft = (c) => !!dateDraft[c.id] && dateDraft[c.id] !== c.due;
   const editServer = (id, patch) => setServers((ss) => ss.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   const saveServer = async (id) => {
     const s = serverById(id);
@@ -165,6 +183,11 @@ function Dashboard({ session }) {
   };
   const saveMsgs = async () => check(await supabase.from("settings").upsert({ user_id: session.user.id, ...msgs }));
 
+  const paidUrl = (c) => {
+    const text = msgs.msg_paid.replace("{nome}", c.name).replace("{data}", fmtDate(c.due)).replace("{valor}", brl(c.value));
+    return `https://wa.me/${(c.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
+  };
+
   const sendExpired = (c) => {
     const text = msgs.msg_expired.replace("{nome}", c.name).replace("{data}", fmtDate(c.due)).replace("{valor}", brl(c.value));
     window.open(`https://wa.me/${(c.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`, "_blank");
@@ -183,7 +206,7 @@ function Dashboard({ session }) {
     if (d < 0) return { t: `Vencido há ${-d}d`, k: "late" };
     if (d === 0) return { t: "Vence hoje", k: "today" };
     if (d === 3) return { t: "Vence em 3 dias", k: "soon" };
-    return { t: `Em ${d} dias`, k: "ok" };
+    return { t: `Em ${d} ${d === 1 ? "dia" : "dias"}`, k: "plain" };
   };
 
   return (
@@ -250,7 +273,12 @@ function Dashboard({ session }) {
                   const open = openId === c.id;
                   return (
                     <div className={`row ${open ? "open" : ""}`} key={c.id}>
-                      <span className="f-date" data-l="Vencimento"><input type="date" value={c.due} onChange={(e) => { editClient(c.id, { due: e.target.value }); if (e.target.value) saveClient(c.id, { due: e.target.value }); }} /></span>
+                      <span className="f-date" data-l="Vencimento">
+                        <span className="dateedit">
+                          <input type="date" value={dateDraft[c.id] ?? c.due} onChange={(e) => setDateDraft((d) => ({ ...d, [c.id]: e.target.value }))} onKeyDown={(e) => e.key === "Enter" && saveDate(c)} />
+                          {hasDraft(c) && <button className="ok" onClick={() => saveDate(c)} title="Salvar a nova data e enviar a mensagem de pagamento confirmado" aria-label="Salvar nova data e enviar mensagem de pagamento">OK</button>}
+                        </span>
+                      </span>
                       <span className="f-name" data-l="Cliente">
                         <span className="namebox">
                           <input value={c.name} onChange={(e) => editClient(c.id, { name: e.target.value })} onBlur={() => saveClient(c.id)} />
@@ -315,6 +343,7 @@ function Dashboard({ session }) {
             <p className="hint">Use {"{nome}"}, {"{data}"} e {"{valor}"} no texto.</p>
             <label className="msg">3 dias antes<textarea rows="3" value={msgs.msg_before} onChange={(e) => setMsgs({ ...msgs, msg_before: e.target.value })} onBlur={saveMsgs} /></label>
             <label className="msg">No dia do vencimento<textarea rows="3" value={msgs.msg_today} onChange={(e) => setMsgs({ ...msgs, msg_today: e.target.value })} onBlur={saveMsgs} /></label>
+            <label className="msg">Pagamento confirmado (enviada ao clicar em OK na data)<textarea rows="3" value={msgs.msg_paid} onChange={(e) => setMsgs({ ...msgs, msg_paid: e.target.value })} onBlur={saveMsgs} /></label>
             <label className="msg">Aplicativo vencido (clientes excluídos)<textarea rows="3" value={msgs.msg_expired} onChange={(e) => setMsgs({ ...msgs, msg_expired: e.target.value })} onBlur={saveMsgs} /></label>
           </section>
         </>
