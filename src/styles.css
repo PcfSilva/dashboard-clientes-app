@@ -766,10 +766,10 @@ textarea:focus {
   .logo {
     display: none;
   }
-}
 
-.stats {
-  justify-content: space-around;
+  .stats {
+    justify-content: space-around;
+  }
 }
 
 .trow {
