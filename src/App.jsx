@@ -68,7 +68,8 @@ function Dashboard({ session }) {
   const [notesId, setNotesId] = useState(null);
   const [trashOpen, setTrashOpen] = useState(null);
   const [dateDraft, setDateDraft] = useState({});
-  const [form, setForm] = useState({ name: "", phone: "", server_id: "", due: todayStr(), value: "" });
+  const [form, setForm] = useState({ name: "", phone: "", server_id: "", due: todayStr(), value: "", notes: "" });
+  const [formNotesOpen, setFormNotesOpen] = useState(false);
 
   const check = (res) => { if (res.error) setError(res.error.message); else setError(""); return res; };
 
@@ -158,11 +159,12 @@ function Dashboard({ session }) {
   };
   const addClient = async () => {
     if (!form.name.trim() || !form.due) return;
-    const row = { name: form.name.trim(), phone: form.phone, server_id: form.server_id || servers[0]?.id || null, due: form.due, value: Number(form.value) || 0 };
+    const row = { name: form.name.trim(), phone: form.phone, server_id: form.server_id || servers[0]?.id || null, due: form.due, value: Number(form.value) || 0, notes: form.notes || "" };
     const { data, error } = await supabase.from("clients").insert(row).select().single();
     if (error) return setError(error.message);
     setClients((c) => [...c, data]);
-    setForm({ ...form, name: "", phone: "", value: "" });
+    setForm({ ...form, name: "", phone: "", value: "", notes: "" });
+    setFormNotesOpen(false);
   };
   const delClient = async (id) => {
     const c = clients.find((x) => x.id === id);
@@ -203,9 +205,9 @@ function Dashboard({ session }) {
   };
 
   const status = (d) => {
-    if (d < 0) return { t: `Há ${-d}d`, k: "late" };
-    if (d === 0) return { t: "Hoje", k: "today" };
-    if (d === 3) return { t: "Em 3 dias", k: "soon" };
+    if (d < 0) return { t: `Vencido há ${-d}d`, k: "late" };
+    if (d === 0) return { t: "Vence hoje", k: "today" };
+    if (d === 3) return { t: "Vence em 3 dias", k: "soon" };
     return { t: `Em ${d} ${d === 1 ? "dia" : "dias"}`, k: "plain" };
   };
 
@@ -252,7 +254,13 @@ function Dashboard({ session }) {
               </select>
               <input type="date" value={form.due} onChange={(e) => setForm({ ...form, due: e.target.value })} />
               <input type="number" min="0" step="0.01" placeholder="Valor (R$)" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
-              <button onClick={addClient}>Adicionar cliente</button>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <button onClick={addClient}>Adicionar cliente</button>
+                <button className={`info ${form.notes ? "has" : ""}`} onClick={() => setFormNotesOpen((o) => !o)} aria-expanded={formNotesOpen} aria-label="Informações adicionais" title="Informações adicionais">i</button>
+              </div>
+              {formNotesOpen && (
+                <textarea style={{ gridColumn: "1 / -1" }} rows="3" placeholder="Informações adicionais: observações, forma de pagamento, aparelho..." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              )}
             </div>
           </section>
 
@@ -369,13 +377,13 @@ function Dashboard({ session }) {
                           <small>{serverById(c.server_id)?.name || "Sem servidor"} · {brl(c.value)} · venc. {fmtDate(c.due)}</small>
                           <small>Excluído em {new Date(c.deleted_at).toLocaleDateString("pt-BR")}</small>
                           {c.notes && <small className="tnote">{c.notes}</small>}
-                          <button className="ghost purge" onClick={() => purgeClient(c.id)}>Apagar de vez</button>
                         </div>
                       )}
                     </div>
                     <div className="tacts">
                       <button disabled={!c.phone} title={c.phone ? "Avisar que o aplicativo venceu" : "Cliente sem WhatsApp cadastrado"} onClick={() => sendExpired(c)}>Enviar aviso</button>
                       <button onClick={() => restoreClient(c.id)}>Restaurar</button>
+                      <button className="ghost" title="Apagar definitivamente" onClick={() => purgeClient(c.id)}>Excluir</button>
                     </div>
                   </div>
                 );
