@@ -762,10 +762,14 @@ textarea:focus {
   }
 }
 
-@media(max-width:386px) {
+@media(max-width:450px) {
   .logo {
     display: none;
   }
+}
+
+.stats {
+  justify-content: space-around;
 }
 
 .trow {
