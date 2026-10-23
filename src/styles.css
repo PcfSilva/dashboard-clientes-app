@@ -301,15 +301,15 @@ button.ghost {
 }
 
 .stats .net {
-  background: linear-gradient(135deg, #bd93f9, #ff79c6);
-  border-color: #bd93f9;
+  background: linear-gradient(135deg, #e8241c, #ff8a3d);
+  border-color: #e8241c;
   border-top-color: var(--cyan);
-  box-shadow: 0 0 22px rgba(189, 147, 249, .35)
+  box-shadow: 0 0 22px rgba(232, 36, 28, .35)
 }
 
 .stats .net span,
 .stats .net strong {
-  color: #282a36
+  color: #ffffff
 }
 
 .nav {
@@ -500,7 +500,7 @@ button.ghost {
 
 .chip.total span,
 .chip.total strong {
-  color: #282a36
+  color: #ffffff
 }
 
 input,
@@ -625,11 +625,11 @@ html {
 
 body {
   min-height: 100vh;
-  background: radial-gradient(900px 420px at 90% -10%, rgba(189, 147, 249, .20), transparent 70%), radial-gradient(700px 380px at -10% 0, rgba(255, 121, 198, .12), transparent 70%), var(--bg)
+  background: radial-gradient(900px 420px at 90% -10%, rgba(232, 36, 28, .22), transparent 70%), radial-gradient(700px 380px at -10% 0, rgba(77, 163, 255, .12), transparent 70%), var(--bg)
 }
 
 ::selection {
-  background: rgba(189, 147, 249, .4)
+  background: rgba(232, 36, 28, .45)
 }
 
 .logo {
@@ -688,7 +688,7 @@ input[type=number] {
 }
 
 .nav button.on {
-  box-shadow: 0 0 16px rgba(189, 147, 249, .4)
+  box-shadow: 0 0 16px rgba(232, 36, 28, .45)
 }
 
 button:not(:disabled):hover {
@@ -702,7 +702,7 @@ button.ghost:not(:disabled):hover {
 }
 
 .table .row:not(.head):hover {
-  background: rgba(189, 147, 249, .06)
+  background: rgba(232, 36, 28, .07)
 }
 
 input:focus,
@@ -831,7 +831,7 @@ textarea:focus {
 
 .ok {
   background: var(--green);
-  color: #282a36
+  color: #050506
 }
 
 .ok {
